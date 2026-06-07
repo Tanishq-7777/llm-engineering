@@ -3,6 +3,9 @@ import json
 from dotenv import load_dotenv
 from scraper import fetch_website_contents, fetch_website_links
 from openai import OpenAI
+from fastapi import FastAPI
+
+app = FastAPI()
 
 load_dotenv()
 
@@ -112,9 +115,30 @@ def create_brochure(company_name,url):
     response = openai.chat.completions.create(
         model="gpt-5-nano",
         messages = [{"role":"system","content":brochure_system_prompt},
-                    {"role":"user","content":get_brochure_user_prompt(company_name,url)}]
+                    {"role":"user","content":get_brochure_user_prompt(company_name,url)}],
         # use stream and try that line by line feature
+        stream=True
     )
-    return response.choices[0].message.content
 
-print(create_brochure("huggingface","https://huggingface.co"))
+    for chunk in response:
+        token = chunk.choices[0].delta.content
+        if token:
+            yield token 
+
+# print(create_brochure("huggingface","https://huggingface.co"))
+
+
+
+def open_ai_call():
+    response = openai.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "hey."}
+        ],
+        stream=True
+    )
+    for chunk in response:
+        token = chunk.choices[0].delta.content
+        if token:
+            yield token
